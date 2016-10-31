@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using Humanizer.Configuration;
+using System.Collections.Generic;
 
 namespace Humanizer
 {
@@ -22,19 +23,40 @@ namespace Humanizer
         /// <returns></returns>
         public static string Humanize(this Enum input)
         {
-            Type type = input.GetType();
-            var caseName = input.ToString();
-            var memInfo = type.GetMember(caseName);
+            var enumType = input.GetType();
+            var enumTypeInfo = enumType.GetTypeInfo();
 
-            if (memInfo.Length > 0)
+            if (IsBitFieldEnum(enumTypeInfo) && !Enum.IsDefined(enumType, input))
             {
-                var customDescription = GetCustomDescription(memInfo[0]);
+                return Enum.GetValues(enumType)
+                           .Cast<Enum>()
+                           .Where(e => input.HasFlag(e))
+                           .Select(e => e.Humanize())
+                           .Humanize();
+            }
+
+            var caseName = input.ToString();
+            var memInfo = enumTypeInfo.GetDeclaredField(caseName);
+
+            if (memInfo != null)
+            {
+                var customDescription = GetCustomDescription(memInfo);
 
                 if (customDescription != null)
                     return customDescription;
             }
 
             return caseName.Humanize();
+        }
+
+        /// <summary>
+        /// Checks whether the given enum is to be used as a bit field type.
+        /// </summary>
+        /// <param name="typeInfo"></param>
+        /// <returns>True if the given enum is a bit field enum, false otherwise.</returns>
+        private static bool IsBitFieldEnum(TypeInfo typeInfo)
+        {
+            return typeInfo.GetCustomAttribute(typeof(FlagsAttribute)) != null;
         }
 
         // I had to add this method because PCL doesn't have DescriptionAttribute & I didn't want two versions of the code & thus the reflection
@@ -47,12 +69,12 @@ namespace Humanizer
                 var attrType = attr.GetType();
                 if (attrType.FullName == DisplayAttributeTypeName)
                 {
-                    var method = attrType.GetMethod(DisplayAttributeGetDescriptionMethodName);
+                    var method = attrType.GetRuntimeMethod(DisplayAttributeGetDescriptionMethodName, new Type[0]);
                     if (method != null)
                         return method.Invoke(attr, new object[0]).ToString();
                 }
                 var descriptionProperty =
-                    attrType.GetProperties()
+                    attrType.GetRuntimeProperties()
                         .Where(StringTypedProperty)
                         .FirstOrDefault(Configurator.EnumDescriptionPropertyLocator);
                 if (descriptionProperty != null)

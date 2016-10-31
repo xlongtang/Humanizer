@@ -16,19 +16,22 @@ namespace Humanizer
             if (value.Length == 0)
                 return value;
 
-            if (truncationString == null || truncationString.Length > length)
+            if (truncationString == null)
+                truncationString = string.Empty;
+
+            if (truncationString.Length > length)
                 return truncateFrom == TruncateFrom.Right ? value.Substring(0, length) : value.Substring(value.Length - length);
 
             var alphaNumericalCharactersProcessed = 0;
 
-            if (value.ToCharArray().Count(Char.IsLetterOrDigit) <= length)
+            if (value.ToCharArray().Count(char.IsLetterOrDigit) <= length)
                 return value;
 
             if (truncateFrom == TruncateFrom.Left)
             {
                 for (var i = value.Length - 1; i > 0; i--)
                 {
-                    if (Char.IsLetterOrDigit(value[i]))
+                    if (char.IsLetterOrDigit(value[i]))
                         alphaNumericalCharactersProcessed++;
 
                     if (alphaNumericalCharactersProcessed + truncationString.Length == length)
@@ -38,7 +41,7 @@ namespace Humanizer
 
             for (var i = 0; i < value.Length - truncationString.Length; i++)
             {
-                if (Char.IsLetterOrDigit(value[i]))
+                if (char.IsLetterOrDigit(value[i]))
                     alphaNumericalCharactersProcessed++;
 
                 if (alphaNumericalCharactersProcessed + truncationString.Length == length)

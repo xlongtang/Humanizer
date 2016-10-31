@@ -157,7 +157,7 @@ namespace Humanizer.Bytes
         public string ToString(string format)
         {
             if (!format.Contains("#") && !format.Contains("0"))
-                format = "#.## " + format;
+                format = "0.## " + format;
 
             Func<string, bool> has = s => format.IndexOf(s, StringComparison.CurrentCultureIgnoreCase) != -1;
             Func<double, string> output = n => n.ToString(format);
@@ -178,7 +178,13 @@ namespace Humanizer.Bytes
             if (format.IndexOf(BitSymbol, StringComparison.Ordinal) != -1)
                 return output(Bits);
 
-            return string.Format("{0} {1}", LargestWholeNumberValue.ToString(format), LargestWholeNumberSymbol);
+            var formattedLargeWholeNumberValue = LargestWholeNumberValue.ToString(format);
+
+            formattedLargeWholeNumberValue = formattedLargeWholeNumberValue.Equals(string.Empty)
+                                              ? "0"
+                                              : formattedLargeWholeNumberValue;
+
+            return string.Format("{0} {1}", formattedLargeWholeNumberValue, LargestWholeNumberSymbol);
         }
 
         public override bool Equals(object value)
@@ -315,7 +321,7 @@ namespace Humanizer.Bytes
         {
             // Arg checking
             if (string.IsNullOrWhiteSpace(s))
-                throw new ArgumentNullException("s", "String is null or whitespace");
+                throw new ArgumentNullException(nameof(s), "String is null or whitespace");
 
             // Setup the result
             result = new ByteSize();
@@ -326,9 +332,12 @@ namespace Humanizer.Bytes
             int num;
             var found = false;
 
+            // Acquiring culture specific decimal separator
+			var decSep = Convert.ToChar(System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator);
+                
             // Pick first non-digit number
             for (num = 0; num < s.Length; num++)
-                if (!(char.IsDigit(s[num]) || s[num] == '.'))
+                if (!(char.IsDigit(s[num]) || s[num] == decSep))
                 {
                     found = true;
                     break;
@@ -337,11 +346,11 @@ namespace Humanizer.Bytes
             if (found == false)
                 return false;
 
-            int lastNumber = num;
+            var lastNumber = num;
 
             // Cut the input string in half
-            string numberPart = s.Substring(0, lastNumber).Trim();
-            string sizePart = s.Substring(lastNumber, s.Length - lastNumber).Trim();
+            var numberPart = s.Substring(0, lastNumber).Trim();
+            var sizePart = s.Substring(lastNumber, s.Length - lastNumber).Trim();
 
             // Get the numeric part
             double number;

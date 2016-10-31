@@ -14,26 +14,26 @@ namespace Humanizer
 
         static StringHumanizeExtensions()
         {
-            PascalCaseWordPartsRegex = new Regex(@"[A-Z]?[a-z]+|[0-9]+|[A-Z]+(?=[A-Z][a-z]|[0-9]|\b)",
+            PascalCaseWordPartsRegex = new Regex(@"[\p{Lu}]?[\p{Ll}]+|[0-9]+[\p{Ll}]*|[\p{Lu}]+(?=[\p{Lu}][\p{Ll}]|[0-9]|\b)",
                 RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture | RegexOptionsUtil.Compiled);
             FreestandingSpacingCharRegex = new Regex(@"\s[-_]|[-_]\s", RegexOptionsUtil.Compiled);
         }
 
         static string FromUnderscoreDashSeparatedWords (string input)
         {
-            return String.Join(" ", input.Split(new[] {'_', '-'}));
+            return string.Join(" ", input.Split(new[] {'_', '-'}));
         }
 
         static string FromPascalCase(string input)
         {
-            var result = String.Join(" ", PascalCaseWordPartsRegex
+            var result = string.Join(" ", PascalCaseWordPartsRegex
                 .Matches(input).Cast<Match>()
-                .Select(match => match.Value.ToCharArray().All(Char.IsUpper) &&
+                .Select(match => match.Value.ToCharArray().All(char.IsUpper) &&
                     (match.Value.Length > 1 || (match.Index > 0 && input[match.Index - 1] == ' ') || match.Value == "I")
                     ? match.Value
                     : match.Value.ToLower()));
 
-            return result.Length > 0 ? Char.ToUpper(result[0]) +
+            return result.Length > 0 ? char.ToUpper(result[0]) +
                 result.Substring(1, result.Length - 1) : result;
         }
 
@@ -45,7 +45,7 @@ namespace Humanizer
         public static string Humanize(this string input)
         {
             // if input is all capitals (e.g. an acronym) then return it without change
-            if (input.ToCharArray().All(Char.IsUpper))
+            if (input.ToCharArray().All(char.IsUpper))
                 return input;
 
             // if input contains a dash or underscore which preceeds or follows a space (or both, e.g. free-standing)

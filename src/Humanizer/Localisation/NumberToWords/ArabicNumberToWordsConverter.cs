@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Humanizer.Localisation.NumberToWords
 {
-    internal class ArabicNumberToWordsConverter : GenderlessNumberToWordsConverter
+    internal class ArabicNumberToWordsConverter : GenderedNumberToWordsConverter
     {
         private static readonly string[] Groups = { "مئة", "ألف", "مليون", "مليار", "تريليون", "كوادريليون", "كوينتليون", "سكستيليون" };
         private static readonly string[] AppendedGroups = { "", "ألفاً", "مليوناً", "ملياراً", "تريليوناً", "كوادريليوناً", "كوينتليوناً", "سكستيليوناً" };
@@ -15,22 +15,24 @@ namespace Humanizer.Localisation.NumberToWords
         private static readonly string[] AppendedTwos = { "مئتان", "ألفان", "مليونان", "ملياران", "تريليونان", "كوادريليونان", "كوينتليونان", "سكستيليونلن" };
         private static readonly string[] Twos = { "مئتان", "ألفان", "مليونان", "ملياران", "تريليونان", "كوادريليونان", "كوينتليونان", "سكستيليونان" };
 
-        public override string Convert(int number)
+        private static readonly string[] FeminineOnesGroup = { "", "واحدة", "اثنتان", "ثلاث", "أربع", "خمس", "ست", "سبع", "ثمان", "تسع", "عشر", "إحدى عشرة", "اثنتا عشرة", "ثلاث عشرة", "أربع عشرة", "خمس عشرة", "ست عشرة", "سبع عشرة", "ثمان عشرة", "تسع عشرة" };
+
+        public override string Convert(int number, GrammaticalGender gender)
         {
             if (number == 0)
                 return "صفر";
 
-            string result = String.Empty;
-            int groupLevel = 0;
+            var result = string.Empty;
+            var groupLevel = 0;
 
             while (number >= 1)
             {
-                int groupNumber = number % 1000;
+                var groupNumber = number % 1000;
                 number /= 1000;
 
-                int tens = groupNumber % 100;
-                int hundreds = groupNumber / 100;
-                string process = String.Empty;
+                var tens = groupNumber % 100;
+                var hundreds = groupNumber / 100;
+                var process = string.Empty;
 
                 if (hundreds > 0)
                 {
@@ -53,57 +55,57 @@ namespace Humanizer.Localisation.NumberToWords
                         }
                         else
                         {
-                            if (process != String.Empty)
+                            if (process != string.Empty)
                                 process += " و ";
 
                             if (tens == 1 && groupLevel > 0 && hundreds == 0)
                                 process += " ";
                             else
-                                process += OnesGroup[tens];
+                                process += gender == GrammaticalGender.Feminine && groupLevel == 0 ? FeminineOnesGroup[tens] : OnesGroup[tens];
                         }
                     }
                     else
                     {
-                        int ones = tens % 10;
+                        var ones = tens % 10;
                         tens = (tens / 10);
 
                         if (ones > 0)
                         {
-                            if (process != String.Empty)
+                            if (process != string.Empty)
                                 process += " و ";
 
-                            process += OnesGroup[ones];
+                            process += gender == GrammaticalGender.Feminine ? FeminineOnesGroup[ones] : OnesGroup[ones];
                         }
 
-                        if (process != String.Empty)
+                        if (process != string.Empty)
                             process += " و ";
 
                         process += TensGroup[tens];
                     }
                 }
 
-                if (process != String.Empty)
+                if (process != string.Empty)
                 {
                     if (groupLevel > 0)
                     {
-                        if (result != String.Empty)
-                            result = String.Format("{0} {1}", "و", result);
+                        if (result != string.Empty)
+                            result = string.Format("{0} {1}", "و", result);
 
                         if (groupNumber != 2)
                         {
                             if (groupNumber % 100 != 1)
                             {
                                 if (groupNumber >= 3 && groupNumber <= 10)
-                                    result = String.Format("{0} {1}", PluralGroups[groupLevel], result);
+                                    result = string.Format("{0} {1}", PluralGroups[groupLevel], result);
                                 else
-                                    result = String.Format("{0} {1}", result != String.Empty ? AppendedGroups[groupLevel] : Groups[groupLevel], result);
+                                    result = string.Format("{0} {1}", result != string.Empty ? AppendedGroups[groupLevel] : Groups[groupLevel], result);
                             }
                             else
-                                result = String.Format("{0} {1}", Groups[groupLevel], result);
+                                result = string.Format("{0} {1}", Groups[groupLevel], result);
                         }
                     }
 
-                    result = String.Format("{0} {1}", process, result);
+                    result = string.Format("{0} {1}", process, result);
                 }
 
                 groupLevel++;
@@ -128,41 +130,58 @@ namespace Humanizer.Localisation.NumberToWords
             {"عشرة", "العاشر"},
         };
 
-        public override string ConvertToOrdinal(int number)
+        private static readonly Dictionary<string, string> FeminineOrdinalExceptions = new Dictionary<string, string>
+        {
+            {"واحدة", "الحادية"},
+            {"إحدى", "الحادية"},
+            {"اثنتان", "الثانية"},
+            {"اثنتا", "الثانية"},
+            {"ثلاث", "الثالثة"},
+            {"أربع", "الرابعة"},
+            {"خمس", "الخامسة"},
+            {"ست", "السادسة"},
+            {"سبع", "السابعة"},
+            {"ثمان", "الثامنة"},
+            {"تسع", "التاسعة"},
+            {"عشر", "العاشرة"},
+        };
+
+        public override string ConvertToOrdinal(int number, GrammaticalGender gender)
         {
             if (number == 0) return "الصفر";
-            var beforeOneHundredNumber = number%100;
-            var overTensPart = number/100*100;
+            var beforeOneHundredNumber = number % 100;
+            var overTensPart = number / 100 * 100;
             var beforeOneHundredWord = string.Empty;
             var overTensWord = string.Empty;
-            
+
             if (beforeOneHundredNumber > 0)
             {
-                beforeOneHundredWord = Convert(beforeOneHundredNumber);
-                beforeOneHundredWord = ParseNumber(beforeOneHundredWord, beforeOneHundredNumber);
+                beforeOneHundredWord = Convert(beforeOneHundredNumber, gender);
+                beforeOneHundredWord = ParseNumber(beforeOneHundredWord, beforeOneHundredNumber, gender);
             }
-            
+
             if (overTensPart > 0)
             {
                 overTensWord = Convert(overTensPart);
-                overTensWord = ParseNumber(overTensWord, overTensPart);
+                overTensWord = ParseNumber(overTensWord, overTensPart, gender);
             }
 
-            var word = beforeOneHundredWord + 
+            var word = beforeOneHundredWord +
                 (overTensPart > 0
                     ? (string.IsNullOrWhiteSpace(beforeOneHundredWord) ? string.Empty : " بعد ") + overTensWord
                     : string.Empty);
             return word.Trim();
         }
 
-        private static string ParseNumber(string word, int number)
+        private static string ParseNumber(string word, int number, GrammaticalGender gender)
         {
-            if (number == 1) 
-                return "الأول";
-            
+            if (number == 1)
+                return gender == GrammaticalGender.Feminine ? "الأولى" : "الأول";
+
             if (number <= 10)
             {
-                foreach (var kv in OrdinalExceptions.Where(kv => word.EndsWith(kv.Key)))
+                var ordinals = gender == GrammaticalGender.Feminine ? FeminineOrdinalExceptions : OrdinalExceptions;
+                foreach (var kv in ordinals.Where(kv => word.EndsWith(kv.Key)))
                 {
                     // replace word with exception
                     return word.Substring(0, word.Length - kv.Key.Length) + kv.Value;
@@ -172,29 +191,30 @@ namespace Humanizer.Localisation.NumberToWords
             {
                 var parts = word.Split(' ');
                 var newParts = new string[parts.Length];
-                int count = 0;
+                var count = 0;
 
                 foreach (var part in parts)
                 {
                     var newPart = part;
                     var oldPart = part;
 
-                    foreach (var kv in OrdinalExceptions.Where(kv => oldPart.EndsWith(kv.Key)))
+                    var ordinals = gender == GrammaticalGender.Feminine ? FeminineOrdinalExceptions : OrdinalExceptions;
+                    foreach (var kv in ordinals.Where(kv => oldPart.EndsWith(kv.Key)))
                     {
                         // replace word with exception
                         newPart = oldPart.Substring(0, oldPart.Length - kv.Key.Length) + kv.Value;
                     }
-                    
+
                     if (number > 19 && newPart == oldPart && oldPart.Length > 1)
                         newPart = "ال" + oldPart;
-                    
+
                     newParts[count++] = newPart;
                 }
 
                 word = string.Join(" ", newParts);
             }
             else
-                word = "ال"+word;
+                word = "ال" + word;
 
             return word;
         }
